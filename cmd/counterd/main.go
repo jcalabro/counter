@@ -59,7 +59,7 @@ func Count(w http.ResponseWriter, r *http.Request) {
 	atomic.AddUint64(&count, 1)
 	lines := []string{
 		fmt.Sprintf("host: %v", host),
-		fmt.Sprintf("count: %v", count),
+		fmt.Sprintf("count: %v", atomic.LoadUint64(&count)),
 		fmt.Sprintf("remote: %v", r.RemoteAddr),
 	}
 
