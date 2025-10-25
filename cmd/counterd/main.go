@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"net/http/httputil"
 	"os"
 	"strings"
 	"sync/atomic"
@@ -39,6 +40,7 @@ func main() {
 
 	r := mux.NewRouter()
 	r.HandleFunc("/", Count)
+	r.HandleFunc("/dump", Dump)
 	r.HandleFunc("/ping", Ping)
 
 	srv := &http.Server{
@@ -72,6 +74,18 @@ func Count(w http.ResponseWriter, r *http.Request) {
 	msg := strings.Join(lines, "\n")
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte(msg + "\n"))
+}
+
+func Dump(w http.ResponseWriter, r *http.Request) {
+	dump, err := httputil.DumpRequest(r, true)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "error: %v\n", err)
+		http.Error(w, "failed to dump request", http.StatusInternalServerError)
+		return
+	}
+
+	fmt.Print(string(dump))
+	w.WriteHeader(http.StatusOK)
 }
 
 func Ping(w http.ResponseWriter, r *http.Request) {
