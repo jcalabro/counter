@@ -1,4 +1,4 @@
-FROM golang:1.12.5
+FROM golang:1.25.6
 
 ENV GODEBUG netdns=cgo
 

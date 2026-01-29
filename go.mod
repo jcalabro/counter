@@ -1,6 +1,6 @@
 module github.com/jcalabro/counter
 
-go 1.23.0
+go 1.25.6
 
 require (
 	github.com/facebookgo/grace v0.0.0-20180706040059-75cf19382434
