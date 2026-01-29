@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 	"net/http/httputil"
+	_ "net/http/pprof"
 	"os"
 	"strings"
 	"sync/atomic"
@@ -13,6 +14,9 @@ import (
 
 	"github.com/facebookgo/grace/gracehttp"
 	"github.com/gorilla/mux"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
 const (
@@ -20,13 +24,21 @@ const (
 	writeTimeout = time.Second * 5
 
 	fwdForHeader = "X-Forwarded-For"
+
+	namespace = "counterd"
 )
 
 var (
-	addr = flag.String("addr", "0.0.0.0:8000", "Primary HTTP addr")
+	addr = flag.String("addr", "0.0.0.0:8000", "HTTP addr")
 
 	count uint64
 	host  string
+
+	httpRequestsTotal = promauto.NewCounterVec(prometheus.CounterOpts{
+		Name:      "http_requests_total",
+		Namespace: namespace,
+		Help:      "Total number of HTTP requests",
+	}, []string{"endpoint"})
 )
 
 func main() {
@@ -42,6 +54,8 @@ func main() {
 	r.HandleFunc("/", Count)
 	r.HandleFunc("/dump", Dump)
 	r.HandleFunc("/ping", Ping)
+	r.Handle("/metrics", promhttp.Handler())
+	r.PathPrefix("/debug/pprof/").Handler(http.DefaultServeMux)
 
 	srv := &http.Server{
 		Handler:      r,
@@ -58,6 +72,7 @@ func main() {
 }
 
 func Count(w http.ResponseWriter, r *http.Request) {
+	httpRequestsTotal.WithLabelValues("/").Inc()
 	atomic.AddUint64(&count, 1)
 	lines := []string{
 		fmt.Sprintf("host: %v", host),
@@ -77,6 +92,7 @@ func Count(w http.ResponseWriter, r *http.Request) {
 }
 
 func Dump(w http.ResponseWriter, r *http.Request) {
+	httpRequestsTotal.WithLabelValues("/dump").Inc()
 	dump, err := httputil.DumpRequest(r, true)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "error: %v\n", err)
